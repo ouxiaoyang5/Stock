@@ -9,7 +9,6 @@ import java.net.URLConnection;
 
 public class DownloadStock implements Runnable {
 	private String stocknum;
-	private String addString;
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 		DownloadStock dl = new DownloadStock();
@@ -37,8 +36,14 @@ public class DownloadStock implements Runnable {
 	@Override
 	public void run() {
 		// TODO Auto-generated method stub
-		URLConnection uc = connectToURL();
-		downloadFile(uc);
+		URLConnection uc = connectToURL("0");
+		if(uc!=null){
+			downloadFile(uc,"0");
+		}
+		uc=connectToURL("1");
+		if(uc!=null){
+			downloadFile(uc,"1");
+		}
 //			if(uc.getContentLength()<1){
 //				System.out.println("file length not right");
 //			}else{
@@ -49,7 +54,7 @@ public class DownloadStock implements Runnable {
 		
 	}
 
-	public void downloadFile(URLConnection uc) {
+	public void downloadFile(URLConnection uc,String addString) {
 		// InputStream is=null;
 		// int sumtry = 0;
 		// try (InputStream tryread = uc.getInputStream()) {
@@ -83,9 +88,10 @@ public class DownloadStock implements Runnable {
 
 	}
 
-	public URLConnection connectToURL() {
+	public URLConnection connectToURL(String addString) {
 		//addString="0";
-		addString="0";
+		//addString="0";
+		boolean urlRight=false;
 		String tryString="http://quotes.money.163.com/"+addString+stocknum+".html";
 		try {
 			URLConnection tryConnection=new URL(tryString).openConnection();
@@ -93,80 +99,88 @@ public class DownloadStock implements Runnable {
 			//System.out.println(result);
 			//System.out.println(result.charAt(9));
 			if(result==null||result.charAt(9)=='4'){
-				addString="1";
+				//addString="1";
+				urlRight=false;
+			}else {
+				urlRight=true;
 			}
-			tryString="http://quotes.money.163.com/"+addString+stocknum+".html";
-			tryConnection=new URL(tryString).openConnection();
-			result=tryConnection.getHeaderField(0);
-			//System.out.println(result);
-			if(result==null || result.charAt(9)=='4'){
-				System.out.println(tryString);
-				System.out.println("url not right");
-			}
+//			tryString="http://quotes.money.163.com/"+addString+stocknum+".html";
+//			tryConnection=new URL(tryString).openConnection();
+//			result=tryConnection.getHeaderField(0);
+//			//System.out.println(result);
+//			if(result==null || result.charAt(9)=='4'){
+//				System.out.println(tryString);
+//				System.out.println("url not right");
+//			}
 		} catch (IOException e2) {
 			// TODO Auto-generated catch block
 			e2.printStackTrace();
 		}
 		
-		String str = "http://quotes.money.163.com/service/chddata.html?code="
-				+ addString
-				+ stocknum
-				+ "&start=19901219&end=20150716&fields=TCLOSE;HIGH;LOW;TOPEN;LCLOSE;CHG;PCHG;VOTURNOVER;VATURNOVER";
-		//System.out.println(str);
-		
-		URL url = null;
-		try {
-			url = new URL(str);
-		} catch (MalformedURLException e) {
-			// TODO Auto-generated catch block
-			System.out.println("URL not right");
-			System.exit(0);
-		}
-		URLConnection uc = null;
-		int reconnecttimes = 0;
-		while (uc == null && reconnecttimes < 10) {
-			reconnecttimes++;
+		if(urlRight==true){
+			String str = "http://quotes.money.163.com/service/chddata.html?code="
+					+ addString
+					+ stocknum
+					+ "&start=19901219&end=20150716&fields=TCLOSE;HIGH;LOW;TOPEN;LCLOSE;CHG;PCHG;VOTURNOVER;VATURNOVER";
+			//System.out.println(str);
+			
+			URL url = null;
 			try {
-				uc = url.openConnection();
-//				uc.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko");
-//				uc.setRequestProperty("Accept", "text/html, application/xhtml+xml, */*");
-//				uc.setRequestProperty("Accept-Language", "zh-CN");
-//				uc.setRequestProperty("Accept-Encoding", "gzip, deflate");
-//				uc.setRequestProperty("Host", "quotes.money.163.com");
-//				uc.setRequestProperty("Connection", "Connection");
-			} catch (IOException e) {
+				url = new URL(str);
+			} catch (MalformedURLException e) {
 				// TODO Auto-generated catch block
-				System.out.println("network error, reconnect.");
+				System.out.println("URL not right");
+				System.exit(0);
+			}
+			URLConnection uc = null;
+			int reconnecttimes = 0;
+			while (uc == null && reconnecttimes < 10) {
+				reconnecttimes++;
 				try {
-					Thread.sleep(2000);
-				} catch (InterruptedException e1) {
+					uc = url.openConnection();
+//					uc.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko");
+//					uc.setRequestProperty("Accept", "text/html, application/xhtml+xml, */*");
+//					uc.setRequestProperty("Accept-Language", "zh-CN");
+//					uc.setRequestProperty("Accept-Encoding", "gzip, deflate");
+//					uc.setRequestProperty("Host", "quotes.money.163.com");
+//					uc.setRequestProperty("Connection", "Connection");
+				} catch (IOException e) {
 					// TODO Auto-generated catch block
-					System.out.println("Thread sleep interrupted");
+					System.out.println("network error, reconnect.");
+					try {
+						Thread.sleep(2000);
+					} catch (InterruptedException e1) {
+						// TODO Auto-generated catch block
+						System.out.println("Thread sleep interrupted");
+					}
 				}
 			}
+			if (uc == null) {
+				System.out.println("can not connect network");
+				System.exit(0);
+			}
+			try {
+				uc.connect();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				System.out.println("connect error");
+				System.exit(0);
+			}
+			//System.out.println(uc.getContentLength());
+			//System.out.println(uc.getDate());
+			//System.out.println(uc.getHeaderField(0));
+//			Map<String, List<String>> m=uc.getHeaderFields();
+	//	
+//				 for (String key : m.keySet()) {   
+//			            System.out.println("key= " + key + "  and  value= " + m.get(key));   
+//			        }   
+			//System.out.println(uc.getContentLength());
+			//System.out.println();
+			return uc;
+		}else {
+			return null;
 		}
-		if (uc == null) {
-			System.out.println("can not connect network");
-			System.exit(0);
-		}
-		try {
-			uc.connect();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			System.out.println("connect error");
-			System.exit(0);
-		}
-		//System.out.println(uc.getContentLength());
-		//System.out.println(uc.getDate());
-		//System.out.println(uc.getHeaderField(0));
-//		Map<String, List<String>> m=uc.getHeaderFields();
-//	
-//			 for (String key : m.keySet()) {   
-//		            System.out.println("key= " + key + "  and  value= " + m.get(key));   
-//		        }   
-		//System.out.println(uc.getContentLength());
-		//System.out.println();
-		return uc;
+		
 	}
 
 }

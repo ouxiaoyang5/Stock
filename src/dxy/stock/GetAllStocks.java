@@ -16,7 +16,10 @@ public class GetAllStocks {
 //		DownloadStock dl=new DownloadStock(stocknum);
 //		Thread thread=new Thread(dl);
 //		thread.start();
+		long startTime=System.currentTimeMillis(); 
 		multiDownload();
+		long endTime=System.currentTimeMillis();
+		System.out.println(endTime-startTime);
 	}
 	
 	public static ArrayList<String> getStockList(){
