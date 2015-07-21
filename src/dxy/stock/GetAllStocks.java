@@ -16,10 +16,10 @@ public class GetAllStocks {
 //		DownloadStock dl=new DownloadStock(stocknum);
 //		Thread thread=new Thread(dl);
 //		thread.start();
-		long startTime=System.currentTimeMillis(); 
+		//long startTime=System.currentTimeMillis(); 
 		multiDownload();
-		long endTime=System.currentTimeMillis();
-		System.out.println(endTime-startTime);
+		//long endTime=System.currentTimeMillis();
+		//System.out.println(endTime-startTime);
 	}
 	
 	public static ArrayList<String> getStockList(){
@@ -77,11 +77,30 @@ public class GetAllStocks {
 		ArrayList<String> stockList=getStockList();
 		Thread thread;
 		for(String stocknum:stockList){
-			DownloadStock dl=new DownloadStock(stocknum);
+			DownloadStock dl=new DownloadStock(stocknum,"intoFile");
 			thread=new Thread(dl);
 			thread.start();
 			System.out.println(Thread.activeCount());
 			while(Thread.activeCount()>4){
+				try {
+					Thread.sleep(1000);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+	
+	public static void multiGetList(ArrayList<String> list){
+		ArrayList<String> stockList=getStockList();
+		Thread thread;
+		for(String stocknum:stockList){
+			DownloadStock dl=new DownloadStock(stocknum,"intoSql",list);
+			thread=new Thread(dl);
+			thread.start();
+			System.out.println(Thread.activeCount());
+			while(Thread.activeCount()>5){
 				try {
 					Thread.sleep(1000);
 				} catch (InterruptedException e) {

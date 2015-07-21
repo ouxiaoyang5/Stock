@@ -1,30 +1,48 @@
 package dxy.stock;
 
+import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.RandomAccessFile;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
 
 public class DownloadStock implements Runnable {
 	private String stocknum;
+	private String operation;
+	private ArrayList<String> stockList;
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
-		DownloadStock dl = new DownloadStock();
+		DownloadStock dl = new DownloadStock("000001");
 		Thread thread = new Thread(dl);
 		thread.start();
 	}
 
-	public DownloadStock() {
-		this.stocknum = "000705";
-	}
-
 	public DownloadStock(String stocknum) {
-		super();
 		this.stocknum = stocknum;
 	}
 
+	public DownloadStock(String stocknum,String op) {
+		super();
+		this.stocknum = stocknum;
+		operation=op;
+	}
+	
+	public DownloadStock(String stocknum,String op,ArrayList<String> sList) {
+		super();
+		this.stocknum = stocknum;
+		operation=op;
+		stockList=sList;
+	}
+	
 	public String getStocknum() {
 		return stocknum;
 	}
@@ -36,37 +54,83 @@ public class DownloadStock implements Runnable {
 	@Override
 	public void run() {
 		// TODO Auto-generated method stub
-		URLConnection uc = connectToURL("0");
-		if(uc!=null){
-			downloadFile(uc,"0");
+		if(operation.equalsIgnoreCase("intoFile")){
+			URLConnection uc = connectToURL("0");
+			if(uc!=null){
+				updateFile(uc,"0");
+			}
+			uc=connectToURL("1");
+			if(uc!=null){
+				updateFile(uc,"1");
+			}
+		}else if(operation.equalsIgnoreCase("intoSql")){
+			if(isRight("0")){
+				//System.out.println("0"+stocknum);
+				stockList.add("0"+stocknum);
+			}
+			if(isRight("1")){
+				//System.out.println("1"+stocknum);
+				stockList.add("1"+stocknum);
+			}
 		}
-		uc=connectToURL("1");
-		if(uc!=null){
-			downloadFile(uc,"1");
-		}
-//			if(uc.getContentLength()<1){
-//				System.out.println("file length not right");
-//			}else{
-//				downloadFile(uc);
-//			}
-			
-		
 		
 	}
 
+	public void updateFile(URLConnection uc,String addString){
+		try (BufferedReader br=new BufferedReader(new InputStreamReader(uc.getInputStream(),"GB2312"));
+				InputStream is=uc.getInputStream();
+				RandomAccessFile ra=new RandomAccessFile("E:\\stockcsv\\"
+						+ addString+stocknum + ".csv", "rw");
+				FileOutputStream fo = new FileOutputStream("E:\\stockcsv\\"
+						+ addString+stocknum + "_temp.csv")
+						) {
+			if(ra.length()<100){
+				downloadFile(uc, addString);
+				return;
+			}else {
+				ra.seek(85);
+				byte[] buffer=new byte[10];
+				ra.read(buffer);
+				String fileTimeStr=new String(buffer,"GB2312");
+				String str=br.readLine()+"\r\n";
+				fo.write(str.getBytes("GB2312"));
+				str=br.readLine()+"\r\n";				
+				String urlTimeStr=str.substring(0, 10);
+				SimpleDateFormat sdf=new SimpleDateFormat("yyyy-MM-dd");
+				Date fileDate=sdf.parse(fileTimeStr);
+				Date urlDate=sdf.parse(urlTimeStr);
+
+				while(fileDate.before(urlDate)){
+					fo.write(str.getBytes("GB2312"));
+					str=br.readLine()+"\r\n";
+					urlTimeStr=str.substring(0, 10);
+					urlDate=sdf.parse(urlTimeStr);
+				}
+				fo.write((str).getBytes("GB2312"));
+				while((str=br.readLine())!=null){
+					fo.write((str+"\r\n").getBytes("GB2312"));
+				}
+
+
+				
+			}
+			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			System.exit(0);
+		} catch (ParseException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		new File("E:\\stockcsv\\"
+				+ addString+stocknum + ".csv").delete();
+		new File("E:\\stockcsv\\"
+				+ addString+stocknum + "_temp.csv").renameTo(new File("E:\\stockcsv\\"
+						+ addString+stocknum + ".csv"));
+		System.out.println(addString+stocknum);
+	}
 	public void downloadFile(URLConnection uc,String addString) {
-		// InputStream is=null;
-		// int sumtry = 0;
-		// try (InputStream tryread = uc.getInputStream()) {
-		// byte[] buffer = new byte[1024];
-		// while (tryread.read(buffer) != -1) {
-		// sumtry++;
-		// }
-		// } catch (IOException e1) {
-		// // TODO Auto-generated catch block
-		// System.out.println("IO exception");
-		// }
-		// if (sumtry > 3) {
 		try (InputStream is = uc.getInputStream();
 				FileOutputStream fo = new FileOutputStream("E:\\stockcsv\\"
 						+ addString+stocknum + ".csv")) {
@@ -84,44 +148,34 @@ public class DownloadStock implements Runnable {
 			System.exit(0);
 		}
 		System.out.println(addString+stocknum);
-		// }
-
 	}
-
-	public URLConnection connectToURL(String addString) {
-		//addString="0";
-		//addString="0";
+	
+	public boolean isRight(String addString){
 		boolean urlRight=false;
 		String tryString="http://quotes.money.163.com/"+addString+stocknum+".html";
 		try {
 			URLConnection tryConnection=new URL(tryString).openConnection();
 			String result=tryConnection.getHeaderField(0);
 			//System.out.println(result);
-			//System.out.println(result.charAt(9));
 			if(result==null||result.charAt(9)=='4'){
 				//addString="1";
 				urlRight=false;
 			}else {
 				urlRight=true;
 			}
-//			tryString="http://quotes.money.163.com/"+addString+stocknum+".html";
-//			tryConnection=new URL(tryString).openConnection();
-//			result=tryConnection.getHeaderField(0);
-//			//System.out.println(result);
-//			if(result==null || result.charAt(9)=='4'){
-//				System.out.println(tryString);
-//				System.out.println("url not right");
-//			}
 		} catch (IOException e2) {
 			// TODO Auto-generated catch block
 			e2.printStackTrace();
 		}
-		
-		if(urlRight==true){
+		return urlRight;
+	}
+	
+	public URLConnection connectToURL(String addString) {		
+		if(isRight(addString)){
 			String str = "http://quotes.money.163.com/service/chddata.html?code="
 					+ addString
 					+ stocknum
-					+ "&start=19901219&end=20150716&fields=TCLOSE;HIGH;LOW;TOPEN;LCLOSE;CHG;PCHG;VOTURNOVER;VATURNOVER";
+					+ "&start=19901219&end=30150716&fields=TCLOSE;HIGH;LOW;TOPEN;LCLOSE;CHG;PCHG;VOTURNOVER;VATURNOVER";
 			//System.out.println(str);
 			
 			URL url = null;
@@ -163,19 +217,14 @@ public class DownloadStock implements Runnable {
 				uc.connect();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
-				System.out.println("connect error");
+				e.printStackTrace();
 				System.exit(0);
 			}
-			//System.out.println(uc.getContentLength());
-			//System.out.println(uc.getDate());
-			//System.out.println(uc.getHeaderField(0));
+
 //			Map<String, List<String>> m=uc.getHeaderFields();
-	//	
 //				 for (String key : m.keySet()) {   
 //			            System.out.println("key= " + key + "  and  value= " + m.get(key));   
 //			        }   
-			//System.out.println(uc.getContentLength());
-			//System.out.println();
 			return uc;
 		}else {
 			return null;
